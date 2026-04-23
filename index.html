@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>فاتورة مخزن جالاكسي الرسمية</title>
+    <!-- استدعاء مكتبة الباركود ومكتبة الخطوط -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --border-color: #000;
+            --bg-grey: #f2f2f2;
+        }
+
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        body { font-family: 'Cairo', sans-serif; background-color: #e0e0e0; margin: 0; padding: 20px; direction: rtl; color: #000; }
+
+        /* لوحة التحكم الذكية */
+        .control-panel {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            padding: 20px; border-radius: 12px; max-width: 210mm;
+            margin: 0 auto 20px auto; 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;
+            color: white;
+        }
+        .control-panel div { display: flex; flex-direction: column; }
+        .control-panel label { font-size: 12px; margin-bottom: 5px; color: #bdc3c7; }
+        .control-panel input { padding: 10px; border: none; border-radius: 6px; font-family: 'Cairo'; font-weight: 600; }
+        .control-panel button { 
+            padding: 12px; border: none; 
+            cursor: pointer; font-weight: 800; border-radius: 6px; transition: 0.3s;
+            margin-top: auto;
+        }
+        .btn-update { background: #e74c3c; color: white; }
+        .btn-update:hover { background: #c0392b; transform: translateY(-2px); }
+        .btn-print { background: #27ae60; color: white; }
+        .btn-print:hover { background: #219150; }
+        .btn-reset { background: #7f8c8d; color: white; }
+
+        /* الحاوية الأساسية للفاتورة (A4) */
+        .invoice-page {
+            width: 210mm; min-height: 290mm; margin: 0 auto; background: white;
+            padding: 10mm; border: 1px solid #000; position: relative;
+        }
+
+        /* الجداول والتنسيق */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+        th, td { border: 1.5px solid var(--border-color); padding: 6px; text-align: center; font-size: 14px; font-weight: 700; }
+        .bg-grey { background-color: var(--bg-grey) !important; }
+
+        /* الهيدر */
+        .header-table td { border: none; vertical-align: middle; }
+        .store-title { font-size: 25px; margin: 0; font-weight: 900; color: #000; }
+        .store-info { font-size: 13px; margin-top: 5px; line-height: 1.6; font-weight: 600; }
+        
+        .barcode-area { text-align: left; }
+        #barcode { width: 160px; height: 60px; }
+
+        /* الأرقام والتواصل */
+        .numbers-cell { font-size: 12px; line-height: 1.5; direction: ltr; font-weight: 600; }
+
+        /* جدول الأصناف */
+        .items-table th { font-size: 13px; height: 40px; background-color: #333 !important; color: #fff !important; }
+        .items-table td { height: 35px; border: 1px solid #000; }
+        .item-name { text-align: right !important; padding-right: 15px; font-size: 15px; }
+
+        /* مربعات الإجماليات المتقدمة */
+        .net-total-box { font-size: 26px !important; color: #155724; background: #d4edda !important; }
+        .blue-text { color: #000080; }
+        .small-txt { font-size: 12px !important; font-weight: 400; }
+
+        /* إخفاء لوحة التحكم عند الطباعة */
+        @media print {
+            .control-panel { display: none; }
+            body { background: white; padding: 0; }
+            .invoice-page { border: none; width: 100%; margin: 0; padding: 0; }
+        }
+    </style>
+</head>
+<body onload="init()">
+
+    <!-- لوحة التحكم -->
+    <div class="control-panel">
+        <div><label>تاريخ الفاتورة:</label><input type="text" id="in_date" value="2025/10/15"></div>
+        <div><label>رقم الفاتورة:</label><input type="text" id="in_inv_num" value="999590"></div>
+        <div><label>اسم العميل:</label><input type="text" id="in_name" value="ص / د. باتريشا متري"></div>
+        <div><label>عنوان العميل:</label><input type="text" id="in_address" value="48 ك حدائق الاهرام - جيزة"></div>
+        <button class="btn-update" onclick="updateInvoice()">تحديث وحفظ البيانات</button>
+        <button class="btn-print" onclick="window.print()">طباعة الآن</button>
+        
+    </div>
+
+    <div class="invoice-page">
+        <!-- الهيدر -->
+        <table class="header-table">
+            <tr>
+                <td width="30%" style="text-align: right;">
+                    <div style="font-size: 16px;">التاريخ: <span id="out_date">2025/10/15</span></div>
+                    <div style="font-size: 16px;">رقم الفاتورة: <span id="out_inv_num">999590</span></div>
+                </td>
+                <td width="40%" style="text-align: center;">
+                    <h1 class="store-title">مخزن جالاكسي للأدوية</h1>
+                    <div class="store-info" >
+                        س. ت // 12715 &nbsp; ب. ض // 602-386-489 <br>
+                        رخصة رقم 11 لسنة 2022
+                    </div>
+                </td>
+                <td width="30%" class="barcode-area">
+                    <div style="margin-bottom: 5px;">الوقت: <span id="out_time">00:00:00</span></div>
+                    <svg id="barcode"></svg>
+                </td>
+            </tr>
+        </table>
+
+        <!-- بيانات التواصل -->
+        <table style="margin-top: 15px;">
+            <tr>
+                <td width="20%" class="bg-grey">أرقام المبيعات</td>
+                <td width="35%" class="numbers-cell">
+                    37423307 ** 37423315 ** 37423314<br>
+                    01023784393 ** 01156269009 ** 01096948483
+                </td>
+                <td width="15%" class="bg-grey">اسم العميل</td>
+                <td width="30%" id="out_name" style="text-align: right; font-size: 16px;">ص / د. باتريشا متري</td>
+            </tr>
+            <tr>
+                <td class="bg-grey" colspan="2">للشكاوى: 01011218675</td>
+                <td class="bg-grey">عنوان العميل</td>
+                <td id="out_address" style="text-align: right; font-size: 15px;">48 ك حدائق الاهرام - جيزة</td>
+            </tr>
+        </table>
+
+        <!-- جدول الأصناف -->
+        <table class="items-table" style="margin-top: 10px;">
+            <thead>
+                <tr>
+                    <th width="5%">م</th>
+                    <th width="10%">زون</th>
+                    <th width="15%">تشغيلة / صلاحية</th>
+                    <th width="10%">كود</th>
+                    <th width="35%">اسم الصنف</th>
+                    <th width="5%">كمية</th>
+                    <th width="5%">سعر</th>
+                    <th width="5%">خصم</th>
+                    <th width="10%">الاجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>1/S13-R3</td><td>01/01/2025</td><td>26</td><td class="item-name">افيروفيروز كبسول</td><td>2</td><td>110</td><td>29</td><td>156.2</td></tr>
+                <tr><td>2</td><td>2/S12-R3</td><td>01/01/2025</td><td>280</td><td class="item-name">تامسولين ٢٨كبسول /ماركيرل</td><td>2</td><td>93</td><td>18</td><td>152.52</td></tr>
+                <tr><td>3</td><td>3/S06-R3</td><td>01/01/2025</td><td>1188</td><td class="item-name">ديبوفيت ٥ امبولات</td><td>1</td><td>57.5</td><td>21</td><td>45.425</td></tr>
+                <tr><td>4</td><td>3/S20-R1</td><td>01/01/2025</td><td>42</td><td class="item-name">سبانيلا ٣٥ ام ار ٣٠ قرص</td><td>2</td><td>24.3</td><td>17</td><td>40.338</td></tr>
+                <tr><td>5</td><td>3/S20-R3</td><td>01/01/2025</td><td>95</td><td class="item-name">سترنجازول ٤٠مجم ٢١قرص</td><td>1</td><td>87</td><td>31</td><td>60.03</td></tr>
+            </tbody>
+        </table>
+
+        <!-- الحسابات -->
+        <table style="border-top: none;">
+            <tr>
+                <td rowspan="2" width="15%" class="bg-grey">صافي الفاتورة</td>
+                <td rowspan="2" width="15%" class="net-total-box" id="net_total">454.51</td>
+                <td width="15%" class="bg-grey">الحساب السابق</td>
+                <td width="12%" class="blue-text">1812.875</td>
+                <td width="3%">1</td>
+                <td width="15%" class="bg-grey">تاريخ آخر سداد</td>
+                <td width="10%">2025/10/14</td>
+                <td width="10%" class="bg-grey">تاريخ الطباعة</td>
+                <td width="10%" class="sync_date">2025/10/15</td>
+            </tr>
+            <tr>
+                <td class="bg-grey">قيمة آخر سداد</td>
+                <td>114</td>
+                <td>1</td>
+                <td class="bg-grey">وقت الطباعة</td>
+                <td><span class="sync_time">00:00:00</span></td>
+                <td class="bg-grey">تاريخ الطباعة</td>
+                <td class="sync_date">2025/10/15</td>
+            </tr>
+        </table>
+        
+        <table style="border-top: none;">
+            <tr>
+                <td width="15%" class="bg-grey">الرصيد الحالي</td>
+                <td width="15%" class="blue-text" style="font-size: 18px;">3517.188</td>
+                <td width="3%" class="bg-grey">M</td>
+                <td width="15%" class="bg-grey">إجمالي جمهور</td>
+                <td width="12%" style="color: #7AA300;">599.1</td>
+                <td width="25%" class="small-txt">يوجد فواتير اخرى للعميل : 4</td>
+                <td width="10%" class="bg-grey">نوع التعامل</td>
+                <td width="10%"></td>
+            </tr>
+        </table>
+
+        <!-- التوقيع والعنوان -->
+        <table style="border-top: none; margin-top: 10px;">
+            <tr>
+                <td width="10%" class="bg-grey">الكاتب</td>
+                <td width="20%">محمد جمال</td>
+                <td width="45%" style="text-align: right;">
+                    <b>العنوان :</b> كوبري عابدين طريق المنصورية - كرداسة - جيزة
+                </td>
+                <td width="10%" class="bg-grey">ملاحظات</td>
+                <td width="15%"></td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        function init() {
+            // محاولة تحميل البيانات المخزنة عند فتح الصفحة
+            loadData();
+            
+            updateTime();
+            generateBarcode();
+            setInterval(updateTimeOnly, 1000);
+        }
+
+        function updateTimeOnly() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour12: false });
+            if (!window.fixedTime) {
+                document.getElementById('out_time').innerText = timeStr;
+                const syncTimes = document.getElementsByClassName('sync_time');
+                for(let st of syncTimes) st.innerText = timeStr;
+            }
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour12: false });
+            document.getElementById('out_time').innerText = timeStr;
+            const syncTimes = document.getElementsByClassName('sync_time');
+            for(let st of syncTimes) st.innerText = timeStr;
+        }
+
+        function generateBarcode() {
+            const invNum = document.getElementById('in_inv_num').value;
+            if(!invNum) return;
+            JsBarcode("#barcode", invNum, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 2,
+                height: 50,
+                displayValue: true,
+                fontSize: 14,
+                font: "Cairo"
+            });
+        }
+
+        // دالة حفظ البيانات في LocalStorage
+        function saveData() {
+            const data = {
+                date: document.getElementById('in_date').value,
+                invNum: document.getElementById('in_inv_num').value,
+                name: document.getElementById('in_name').value,
+                address: document.getElementById('in_address').value
+            };
+            localStorage.setItem('galaxy_invoice_saved', JSON.stringify(data));
+        }
+
+        // دالة استرجاع البيانات من LocalStorage
+        function loadData() {
+            const saved = localStorage.getItem('galaxy_invoice_saved');
+            if (saved) {
+                const data = JSON.parse(saved);
+                document.getElementById('in_date').value = data.date;
+                document.getElementById('in_inv_num').value = data.invNum;
+                document.getElementById('in_name').value = data.name;
+                document.getElementById('in_address').value = data.address;
+                
+                // تحديث العرض البصري فوراً بعد التحميل
+                syncUIData();
+            }
+        }
+
+        // دالة لمسح الذاكرة
+        function clearSavedData() {
+            if(confirm("هل تريد مسح البيانات المحفوظة؟")) {
+                localStorage.removeItem('galaxy_invoice_saved');
+                location.reload();
+            }
+        }
+
+        // تحديث النصوص المعروضة في الفاتورة
+        function syncUIData() {
+            const dateVal = document.getElementById('in_date').value;
+            const invNum = document.getElementById('in_inv_num').value;
+            const name = document.getElementById('in_name').value;
+            const address = document.getElementById('in_address').value;
+
+            document.getElementById('out_date').innerText = dateVal;
+            document.getElementById('out_inv_num').innerText = invNum;
+            document.getElementById('out_name').innerText = name;
+            document.getElementById('out_address').innerText = address;
+
+            const dateCells = document.getElementsByClassName('sync_date');
+            for(let cell of dateCells) cell.innerText = dateVal;
+            
+            generateBarcode();
+        }
+
+        function updateInvoice() {
+            window.fixedTime = true; // تثبيت الوقت عند التحديث
+            
+            // تنفيذ التحديث البصري
+            syncUIData();
+            
+            // تنفيذ الحفظ في المتصفح
+            saveData();
+            
+        }
+    </script>
+</body>
+</html>
