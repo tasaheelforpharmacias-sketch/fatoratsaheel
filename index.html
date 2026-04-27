@@ -167,7 +167,7 @@
                 <td width="15%" class="bg-grey">تاريخ آخر سداد</td>
                 <td width="10%">2025/10/14</td>
                 <td width="10%" class="bg-grey">تاريخ الطباعة</td>
-                <td width="10%" class="sync_date">2025/10/15</td>
+                <td width="10%" id="last_payment_date"></td>
             </tr>
             <tr>
                 <td class="bg-grey">قيمة آخر سداد</td>
@@ -175,8 +175,7 @@
                 <td>1</td>
                 <td class="bg-grey">وقت الطباعة</td>
                 <td><span class="sync_time">00:00:00</span></td>
-                <td class="bg-grey">تاريخ الطباعة</td>
-                <td class="sync_date">2025/10/15</td>
+
             </tr>
         </table>
         
@@ -286,6 +285,17 @@
         // تحديث النصوص المعروضة في الفاتورة
         function syncUIData() {
             const dateVal = document.getElementById('in_date').value;
+            // حساب تاريخ آخر سداد (قبل يوم)
+            const dateParts = dateVal.split('/');
+            const d = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+            d.setDate(d.getDate() - 1);
+            
+            const lastPaymentDate = d.getFullYear() + '/' +
+                String(d.getMonth() + 1).padStart(2, '0') + '/' +
+                String(d.getDate()).padStart(2, '0');
+
+// عرض تاريخ آخر سداد
+document.getElementById('last_payment_date').innerText = lastPaymentDate;
             const invNum = document.getElementById('in_inv_num').value;
             const name = document.getElementById('in_name').value;
             const address = document.getElementById('in_address').value;
