@@ -37,7 +37,6 @@
         .btn-update:hover { background: #c0392b; transform: translateY(-2px); }
         .btn-print { background: #27ae60; color: white; }
         .btn-print:hover { background: #219150; }
-        .btn-reset { background: #7f8c8d; color: white; }
 
         /* الحاوية الأساسية للفاتورة (A4) */
         .invoice-page {
@@ -50,7 +49,6 @@
         th, td { border: 1.5px solid var(--border-color); padding: 6px; text-align: center; font-size: 14px; font-weight: 700; }
         .bg-grey { background-color: var(--bg-grey) !important; }
 
-        /* الهيدر */
         .header-table td { border: none; vertical-align: middle; }
         .store-title { font-size: 25px; margin: 0; font-weight: 900; color: #000; }
         .store-info { font-size: 13px; margin-top: 5px; line-height: 1.6; font-weight: 600; }
@@ -58,20 +56,16 @@
         .barcode-area { text-align: left; }
         #barcode { width: 160px; height: 60px; }
 
-        /* الأرقام والتواصل */
         .numbers-cell { font-size: 12px; line-height: 1.5; direction: ltr; font-weight: 600; }
 
-        /* جدول الأصناف */
         .items-table th { font-size: 13px; height: 40px; background-color: #333 !important; color: #fff !important; }
         .items-table td { height: 35px; border: 1px solid #000; }
         .item-name { text-align: right !important; padding-right: 15px; font-size: 15px; }
 
-        /* مربعات الإجماليات المتقدمة */
         .net-total-box { font-size: 26px !important; color: #155724; background: #d4edda !important; }
         .blue-text { color: #000080; }
         .small-txt { font-size: 12px !important; font-weight: 400; }
 
-        /* إخفاء لوحة التحكم عند الطباعة */
         @media print {
             .control-panel { display: none; }
             body { background: white; padding: 0; }
@@ -83,13 +77,12 @@
 
     <!-- لوحة التحكم -->
     <div class="control-panel">
-        <div><label>تاريخ الفاتورة:</label><input type="text" id="in_date" value="2025/10/15"></div>
+        <div><label>تاريخ الفاتورة (YYYY/MM/DD):</label><input type="text" id="in_date" value="2025/10/15"></div>
         <div><label>رقم الفاتورة:</label><input type="text" id="in_inv_num" value="999590"></div>
         <div><label>اسم العميل:</label><input type="text" id="in_name" value="ص / د. باتريشا متري"></div>
         <div><label>عنوان العميل:</label><input type="text" id="in_address" value="48 ك حدائق الاهرام - جيزة"></div>
         <button class="btn-update" onclick="updateInvoice()">تحديث وحفظ البيانات</button>
         <button class="btn-print" onclick="window.print()">طباعة الآن</button>
-        
     </div>
 
     <div class="invoice-page">
@@ -165,17 +158,16 @@
                 <td width="12%" class="blue-text">1812.875</td>
                 <td width="3%">1</td>
                 <td width="15%" class="bg-grey">تاريخ آخر سداد</td>
-                <td width="10%">2025/10/14</td>
-                <td width="10%" class="bg-grey">تاريخ الطباعة</td>
-                <td width="10%" id="last_payment_date"></td>
+                <td width="12%" id="last_payment_val"></td> <!-- تم تغيير المعرف هنا -->
+                <td width="13%" class="bg-grey">تاريخ الطباعة</td>
+                <td width="10%" id="print_date_val"></td> <!-- خانة تاريخ الطباعة من المدخلات -->
             </tr>
             <tr>
                 <td class="bg-grey">قيمة آخر سداد</td>
                 <td>114</td>
                 <td>1</td>
-                <td class="bg-grey">وقت الطباعة</td>
-                <td><span class="sync_time">00:00:00</span></td>
-
+                <td class="bg-grey" colspan="2">ملاحظات الحساب</td>
+                <td colspan="2">يتم مراجعة الحساب دورياً</td>
             </tr>
         </table>
         
@@ -188,7 +180,7 @@
                 <td width="12%" style="color: #7AA300;">599.1</td>
                 <td width="25%" class="small-txt">يوجد فواتير اخرى للعميل : 4</td>
                 <td width="10%" class="bg-grey">نوع التعامل</td>
-                <td width="10%"></td>
+                <td width="10%">آجل</td>
             </tr>
         </table>
 
@@ -208,9 +200,7 @@
 
     <script>
         function init() {
-            // محاولة تحميل البيانات المخزنة عند فتح الصفحة
             loadData();
-            
             updateTime();
             generateBarcode();
             setInterval(updateTimeOnly, 1000);
@@ -221,8 +211,6 @@
             const timeStr = now.toLocaleTimeString('ar-EG', { hour12: false });
             if (!window.fixedTime) {
                 document.getElementById('out_time').innerText = timeStr;
-                const syncTimes = document.getElementsByClassName('sync_time');
-                for(let st of syncTimes) st.innerText = timeStr;
             }
         }
 
@@ -230,8 +218,6 @@
             const now = new Date();
             const timeStr = now.toLocaleTimeString('ar-EG', { hour12: false });
             document.getElementById('out_time').innerText = timeStr;
-            const syncTimes = document.getElementsByClassName('sync_time');
-            for(let st of syncTimes) st.innerText = timeStr;
         }
 
         function generateBarcode() {
@@ -248,7 +234,6 @@
             });
         }
 
-        // دالة حفظ البيانات في LocalStorage
         function saveData() {
             const data = {
                 date: document.getElementById('in_date').value,
@@ -259,7 +244,6 @@
             localStorage.setItem('galaxy_invoice_saved', JSON.stringify(data));
         }
 
-        // دالة استرجاع البيانات من LocalStorage
         function loadData() {
             const saved = localStorage.getItem('galaxy_invoice_saved');
             if (saved) {
@@ -268,34 +252,35 @@
                 document.getElementById('in_inv_num').value = data.invNum;
                 document.getElementById('in_name').value = data.name;
                 document.getElementById('in_address').value = data.address;
-                
-                // تحديث العرض البصري فوراً بعد التحميل
                 syncUIData();
             }
         }
 
-        // دالة لمسح الذاكرة
-        function clearSavedData() {
-            if(confirm("هل تريد مسح البيانات المحفوظة؟")) {
-                localStorage.removeItem('galaxy_invoice_saved');
-                location.reload();
-            }
-        }
-
-        // تحديث النصوص المعروضة في الفاتورة
         function syncUIData() {
             const dateVal = document.getElementById('in_date').value;
-            // حساب تاريخ آخر سداد (قبل يوم)
-            const dateParts = dateVal.split('/');
-            const d = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            d.setDate(d.getDate() - 1);
             
-            const lastPaymentDate = d.getFullYear() + '/' +
-                String(d.getMonth() + 1).padStart(2, '0') + '/' +
-                String(d.getDate()).padStart(2, '0');
+            // حساب تاريخ آخر سداد (تاريخ الطباعة ناقص يوم)
+            // نتوقع الصيغة YYYY/MM/DD
+            const dateParts = dateVal.split('/');
+            if(dateParts.length === 3) {
+                const year = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1;
+                const day = parseInt(dateParts[2]);
+                
+                const d = new Date(year, month, day);
+                d.setDate(d.getDate() - 1); // طرح يوم واحد
+                
+                const lastPayStr = d.getFullYear() + '/' + 
+                                   String(d.getMonth() + 1).padStart(2, '0') + '/' + 
+                                   String(d.getDate()).padStart(2, '0');
+                
+                document.getElementById('last_payment_val').innerText = lastPayStr;
+            }
 
-// عرض تاريخ آخر سداد
-document.getElementById('last_payment_date').innerText = lastPaymentDate;
+            // عرض تاريخ الطباعة (نفس المدخل)
+            document.getElementById('print_date_val').innerText = dateVal;
+            
+            // تحديث بقية البيانات
             const invNum = document.getElementById('in_inv_num').value;
             const name = document.getElementById('in_name').value;
             const address = document.getElementById('in_address').value;
@@ -305,19 +290,12 @@ document.getElementById('last_payment_date').innerText = lastPaymentDate;
             document.getElementById('out_name').innerText = name;
             document.getElementById('out_address').innerText = address;
 
-            const dateCells = document.getElementsByClassName('sync_date');
-            for(let cell of dateCells) cell.innerText = dateVal;
-            
             generateBarcode();
         }
 
         function updateInvoice() {
-            window.fixedTime = true; // تثبيت الوقت عند التحديث
-            
-            // تنفيذ التحديث البصري
+            window.fixedTime = true; 
             syncUIData();
-            
-            // تنفيذ الحفظ في المتصفح
             saveData();
             
         }
